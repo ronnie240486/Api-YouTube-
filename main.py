@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from routers import youtube_viralizar
 from fastapi.middleware.cors import CORSMiddleware
+from routers import youtube_viralizar
 
 app = FastAPI()
 
