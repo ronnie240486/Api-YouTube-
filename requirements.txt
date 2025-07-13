@@ -1,2 +1,7 @@
+
 fastapi
 uvicorn
+httpx
+beautifulsoup4
+lxml
+python-dotenv
