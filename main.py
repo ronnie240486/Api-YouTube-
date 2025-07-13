@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
+from routers import amazon_scraper, youtube_scraper
+
 load_dotenv()
 
 app = FastAPI()
@@ -15,21 +17,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(amazon_scraper.router)
+app.include_router(youtube_scraper.router)
+
 @app.get("/")
 def root():
     return {"status": "API Online"}
-
-@app.get("/amazon/testar")
-def testar_variaveis():
-    access_key = os.getenv("AWS_ACCESS_KEY")
-    secret_key = os.getenv("AWS_SECRET_KEY")
-    tag = os.getenv("AMAZON_TAG")
-    endpoint = os.getenv("ENDPOINT")
-    region = os.getenv("REGION")
-    return {
-        "AWS_ACCESS_KEY": access_key,
-        "AWS_SECRET_KEY": "✔️" if secret_key else None,
-        "AMAZON_TAG": tag,
-        "ENDPOINT": endpoint,
-        "REGION": region
-    }
