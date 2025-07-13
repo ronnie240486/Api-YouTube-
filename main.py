@@ -1,17 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import youtube_busca, amazon_busca
+from routers import youtube_detalhado, amazon_detalhado
 
 app = FastAPI()
 
-# CORS liberado
+# Middleware de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Substituir por domínio Netlify se desejar restringir
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(youtube_busca.router, prefix="/youtube")
-app.include_router(amazon_busca.router, prefix="/amazon")
+app.include_router(youtube_detalhado.router, prefix="/youtube")
+app.include_router(amazon_detalhado.router, prefix="/amazon")
