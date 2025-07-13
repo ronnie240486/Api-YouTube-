@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Query
 import httpx
 from bs4 import BeautifulSoup
