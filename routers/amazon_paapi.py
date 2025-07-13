@@ -1,13 +1,9 @@
 
-import os
 import time
 import hmac
 import hashlib
-import base64
 import httpx
 from fastapi import APIRouter, Query
-from urllib.parse import quote, urlencode
-import xml.etree.ElementTree as ET
 
 router = APIRouter()
 
@@ -15,7 +11,7 @@ ACCESS_KEY = "AKPAFS7GN91752367329"
 SECRET_KEY = "LgObq/8bWan5cBlurvvghdOIyM/QP9mFvqnPn1RQ"
 PARTNER_TAG = "casaedecor0a8-20"
 REGION = "us-east-1"
-HOST = "webservices.amazon.com.br"
+HOST = "webservices.amazon.com"
 SERVICE = "ProductAdvertisingAPI"
 ENDPOINT = f"https://{HOST}/paapi5/searchitems"
 
