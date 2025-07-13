@@ -1,70 +1,91 @@
 from fastapi import APIRouter, Query
-from typing import List
-from datetime import datetime, timezone
-import requests
 import os
+import requests
+from datetime import datetime, timedelta
+from dateutil import parser
 
 router = APIRouter()
 
-API_KEY = os.getenv("YOUTUBE_API_KEY")
-YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search"
-VIDEOS_API_URL = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
-def calcular_cpm(views):
-    if views < 1000:
-        return "R$ 0,00"
-    elif views < 5000:
-        return "R$ 5,00"
-    elif views < 10000:
-        return "R$ 8,00"
-    else:
-        return "R$ 15,00"
+def format_duration(iso_duration):
+    try:
+        if "H" in iso_duration or "M" in iso_duration or "S" in iso_duration:
+            duration = iso_duration.replace("PT", "")
+            h, m, s = 0, 0, 0
+            if "H" in duration:
+                h = int(duration.split("H")[0])
+                duration = duration.split("H")[1]
+            if "M" in duration:
+                m = int(duration.split("M")[0])
+                duration = duration.split("M")[1]
+            if "S" in duration:
+                s = int(duration.replace("S", ""))
+            return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+    except:
+        return "Desconhecida"
 
-@router.get("/youtube/viralizar")
-def buscar_videos_virais(termo: str = Query(..., min_length=2)):
-    params = {
-        "part": "snippet",
-        "q": termo,
-        "type": "video",
-        "order": "date",
-        "maxResults": 5,
-        "key": API_KEY
-    }
-    r = requests.get(YOUTUBE_API_URL, params=params)
-    resultados = r.json()
+def tempo_publicacao(published_at):
+    try:
+        publicado = parser.isoparse(published_at)
+        agora = datetime.utcnow()
+        diff = agora - publicado
+        dias = diff.days
+        horas = diff.seconds // 3600
+        if dias > 0:
+            return f"{dias} dias"
+        elif horas > 0:
+            return f"{horas} horas"
+        else:
+            return "menos de 1 hora"
+    except:
+        return "Desconhecido"
 
-    video_ids = [item["id"]["videoId"] for item in resultados.get("items", [])]
+@router.get("/viralizar")
+def buscar_videos(termo: str = Query(...)):
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&type=video&maxResults=10&key={YOUTUBE_API_KEY}"
+    search_res = requests.get(url).json()
 
-    detalhes_params = {
-        "part": "statistics,snippet,contentDetails",
-        "id": ",".join(video_ids),
-        "key": API_KEY
-    }
-    detalhes_res = requests.get(VIDEOS_API_URL, params=detalhes_params)
-    detalhes = detalhes_res.json()
+    resultados = []
 
-    videos = []
-    for item in detalhes.get("items", []):
+    for item in search_res.get("items", []):
+        video_id = item["id"]["videoId"]
         snippet = item["snippet"]
-        stats = item["statistics"]
+        titulo = snippet["title"]
+        canal = snippet["channelTitle"]
         publicado_em = snippet["publishedAt"]
-        data_publicacao = datetime.fromisoformat(publicado_em.replace("Z", "+00:00"))
-        agora = datetime.now(timezone.utc)
-        horas = (agora - data_publicacao).total_seconds() / 3600
-        views = int(stats.get("viewCount", 0))
-        views_por_hora = views / horas if horas > 0 else views
+        thumbnail = snippet["thumbnails"]["high"]["url"]
+        canal_id = snippet["channelId"]
 
-        videos.append({
-            "titulo": snippet["title"],
-            "canal": snippet["channelTitle"],
-            "thumbnail": snippet["thumbnails"]["high"]["url"],
-            "link": f"https://www.youtube.com/watch?v={item['id']}",
+        stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
+        stats_res = requests.get(stats_url).json()
+        stats = stats_res.get("items", [{}])[0]
+
+        views = int(stats.get("statistics", {}).get("viewCount", 0))
+        likes = int(stats.get("statistics", {}).get("likeCount", 0))
+        comentarios = int(stats.get("statistics", {}).get("commentCount", 0))
+        engajamento = round((likes + comentarios) / views * 100, 2) if views else 0
+
+        cpm = 15.0  # simulação
+        receita = round((views / 1000) * cpm, 2)
+        duracao = format_duration(stats.get("contentDetails", {}).get("duration", "PT0S"))
+        tempo = tempo_publicacao(publicado_em)
+
+        resultados.append({
+            "titulo": titulo,
+            "canal": canal,
+            "canal_link": f"https://www.youtube.com/channel/{canal_id}",
+            "canal_icone": f"https://yt3.ggpht.com/ytc/{canal_id}=s68-c-k-c0x00ffffff-no-rj",
+            "thumbnail": thumbnail,
+            "link": f"https://www.youtube.com/watch?v={video_id}",
             "views": views,
-            "publicado_em": data_publicacao.strftime("%d/%m/%Y %H:%M"),
-            "duracao": item["contentDetails"]["duration"],
-            "cpm_estimado": calcular_cpm(views),
-            "views_por_hora": round(views_por_hora, 2)
+            "views_por_hora": int(views / max(1, ((datetime.utcnow() - parser.isoparse(publicado_em)).total_seconds() / 3600))),
+            "cpm_estimado": f"R$ {cpm:.2f}",
+            "receita_estimada": f"R$ {receita:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "engajamento": engajamento,
+            "duracao": duracao,
+            "tempo_publicacao": tempo,
+            "hashtags": "#video #trending #viral"  # Simulação
         })
 
-    videos.sort(key=lambda x: x["views_por_hora"], reverse=True)
-    return videos
+    return resultados
