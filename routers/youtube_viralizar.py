@@ -26,7 +26,7 @@ def format_duration(iso_duration):
 def tempo_publicacao(published_at):
     try:
         publicado = parser.isoparse(published_at)
-        agora = datetime.now(publicado.tzinfo)
+        agora = datetime.utcnow()
         diff = agora - publicado
         dias = diff.days
         horas = diff.seconds // 3600
