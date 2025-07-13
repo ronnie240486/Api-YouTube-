@@ -1,47 +1,73 @@
-
+import requests
 from fastapi import APIRouter, Query
-import httpx
+from datetime import datetime
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
 router = APIRouter()
 
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+YOUTUBE_API_KEY = "AIzaSyAU4tiYbFlS3Gn68OmsmRqJQnbGKWVpJxQ"
+SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+VIDEO_DETAILS_URL = "https://www.googleapis.com/youtube/v3/videos"
 
 @router.get("/buscar")
-async def buscar_videos(termo: str = Query(...)):
-    search_url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&type=video&maxResults=5&key={YOUTUBE_API_KEY}"
+def buscar_videos(termo: str, pais: str = "BR", max_results: int = 5):
+    params_search = {
+        "part": "snippet",
+        "q": termo,
+        "regionCode": pais,
+        "type": "video",
+        "maxResults": max_results,
+        "key": YOUTUBE_API_KEY
+    }
 
-    async with httpx.AsyncClient() as client:
-        search_response = await client.get(search_url)
-        search_data = search_response.json()
+    search_response = requests.get(SEARCH_URL, params=params_search).json()
 
-        video_ids = ",".join([item["id"]["videoId"] for item in search_data.get("items", [])])
-        stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id={video_ids}&key={YOUTUBE_API_KEY}"
-        stats_response = await client.get(stats_url)
-        stats_data = {item["id"]: item for item in stats_response.json().get("items", [])}
+    if "items" not in search_response:
+        return {"erro": "Erro ao buscar vídeos no YouTube"}
 
-    videos = []
-    for item in search_data.get("items", []):
-        video_id = item["id"]["videoId"]
-        stats = stats_data.get(video_id, {})
-        snippet = item["snippet"]
+    video_ids = [item["id"]["videoId"] for item in search_response["items"]]
+    if not video_ids:
+        return {"erro": "Nenhum vídeo encontrado"}
 
-        views = int(stats.get("statistics", {}).get("viewCount", 0))
-        cpm = 15.00  # CPM simulado
-        receita = (views / 1000) * cpm
-        duration = stats.get("contentDetails", {}).get("duration", "N/A")
+    params_details = {
+        "part": "statistics,snippet,contentDetails",
+        "id": ",".join(video_ids),
+        "key": YOUTUBE_API_KEY
+    }
 
-        videos.append({
-            "videoId": video_id,
-            "titulo": snippet["title"],
-            "canal": snippet["channelTitle"],
-            "thumbnail": snippet["thumbnails"]["medium"]["url"],
-            "views": f"{views:,}",
-            "cpm": f"R$ {cpm:.2f}",
-            "receita": f"R$ {receita:.2f}",
-            "duracao": duration
+    details_response = requests.get(VIDEO_DETAILS_URL, params=params_details).json()
+    resultados = []
+
+    for item in details_response.get("items", []):
+        stats = item.get("statistics", {})
+        snippet = item.get("snippet", {})
+        details = item.get("contentDetails", {})
+
+        view_count = int(stats.get("viewCount", 0))
+        duration = details.get("duration", "PT0M")
+        published_at = snippet.get("publishedAt", "")
+        title = snippet.get("title", "Sem título")
+        channel = snippet.get("channelTitle", "")
+        thumbnails = snippet.get("thumbnails", {})
+        image = thumbnails.get("medium", {}).get("url", "")
+        video_id = item["id"]
+
+        receita = round((view_count / 1000) * 15.0, 2)
+        tempo = "Data: " + published_at[:10]
+
+        resultados.append({
+            "titulo": title,
+            "visualizacoes": view_count,
+            "receita_estimada": receita,
+            "duracao": duration,
+            "tempo": tempo,
+            "canal": channel,
+            "inscritos": 0,
+            "hashtags": [],
+            "cpm": 15.00,
+            "imagem": image,
+            "link": f"https://www.youtube.com/watch?v={video_id}",
+            "em_alta": view_count > 1000000
         })
 
-    return {"videos": videos}
+    return {"videos": resultados}
