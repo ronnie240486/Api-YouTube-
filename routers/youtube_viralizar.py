@@ -40,8 +40,8 @@ def tempo_publicacao(published_at):
         return "Desconhecido"
 
 @router.get("/viralizar")
-def buscar_videos(termo: str, pais: str = "", cidade: str = ""):
-    print(f"[LOG] Termo: {termo}, País: {pais}, Cidade: {cidade}")
+def buscar_videos(termo: str, pais: str = ""):
+    print(f"[LOG] Termo: {termo}, País: {pais}")
     if not YOUTUBE_API_KEY:
         print("[ERRO] YOUTUBE_API_KEY não está definida!")
         return {"erro": "API Key ausente no servidor"}
@@ -95,7 +95,7 @@ def buscar_videos(termo: str, pais: str = "", cidade: str = ""):
                 "tempo_publicacao": tempo,
                 "hashtags": "#video #trending #viral",
                 "pais": pais,
-                "cidade": cidade or "Não especificada"
+                "cidade": "N/A"
             })
 
         return resultados
