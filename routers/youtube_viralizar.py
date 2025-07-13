@@ -1,27 +1,25 @@
 from fastapi import APIRouter, Query
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil import parser
 
 router = APIRouter()
-
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 def format_duration(iso_duration):
     try:
-        if "H" in iso_duration or "M" in iso_duration or "S" in iso_duration:
-            duration = iso_duration.replace("PT", "")
-            h, m, s = 0, 0, 0
-            if "H" in duration:
-                h = int(duration.split("H")[0])
-                duration = duration.split("H")[1]
-            if "M" in duration:
-                m = int(duration.split("M")[0])
-                duration = duration.split("M")[1]
-            if "S" in duration:
-                s = int(duration.replace("S", ""))
-            return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+        duration = iso_duration.replace("PT", "")
+        h, m, s = 0, 0, 0
+        if "H" in duration:
+            h = int(duration.split("H")[0])
+            duration = duration.split("H")[1]
+        if "M" in duration:
+            m = int(duration.split("M")[0])
+            duration = duration.split("M")[1]
+        if "S" in duration:
+            s = int(duration.replace("S", ""))
+        return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
     except:
         return "Desconhecida"
 
@@ -42,8 +40,10 @@ def tempo_publicacao(published_at):
         return "Desconhecido"
 
 @router.get("/viralizar")
-def buscar_videos(termo: str = Query(...)):
-    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&type=video&maxResults=10&key={YOUTUBE_API_KEY}"
+def buscar_videos(termo: str, pais: str = "", cidade: str = ""):
+    print(f"Buscando vídeos para: {termo}, País: {pais}, Cidade: {cidade}")
+    region_code = pais.upper() if pais else "BR"
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&regionCode={region_code}&type=video&maxResults=10&key={YOUTUBE_API_KEY}"
     search_res = requests.get(url).json()
 
     resultados = []
@@ -66,7 +66,7 @@ def buscar_videos(termo: str = Query(...)):
         comentarios = int(stats.get("statistics", {}).get("commentCount", 0))
         engajamento = round((likes + comentarios) / views * 100, 2) if views else 0
 
-        cpm = 15.0  # simulação
+        cpm = 15.0  # Simulado
         receita = round((views / 1000) * cpm, 2)
         duracao = format_duration(stats.get("contentDetails", {}).get("duration", "PT0S"))
         tempo = tempo_publicacao(publicado_em)
@@ -85,7 +85,9 @@ def buscar_videos(termo: str = Query(...)):
             "engajamento": engajamento,
             "duracao": duracao,
             "tempo_publicacao": tempo,
-            "hashtags": "#video #trending #viral"  # Simulação
+            "hashtags": "#video #trending #viral",
+            "pais": pais,
+            "cidade": cidade or "Não especificada"
         })
 
     return resultados
