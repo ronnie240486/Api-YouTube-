@@ -1,20 +1,25 @@
+
 from fastapi import APIRouter, Query
-from typing import Optional
+import random
 
 router = APIRouter()
 
 @router.get("/buscar")
-def buscar_videos(termo: str, pais: Optional[str] = None, cidade: Optional[str] = None):
-    return {
-        "resultados": [
-            {
-                "canal": "Canal Real Exemplo",
-                "visualizacoes": 9738544,
-                "receita_estimada": 146078.16,
-                "cpm": 15.00,
-                "duracao": "PT36S",
-                "publicado_ha": "5 dias",
-                "hashtags": ["#celular", "#tendência"]
-            }
-        ]
-    }
+def buscar_videos(termo: str = Query(...)):
+    if termo.lower() == "vazio":
+        return {"videos": []}  # simula nenhum resultado
+    else:
+        return {
+            "videos": [
+                {
+                    "titulo": f"Vídeo sobre {termo}",
+                    "canal": "Canal Exemplo",
+                    "views": f"{random.randint(1000, 1000000)}",
+                    "receita": "R$ {:.2f}".format(random.uniform(10, 300)),
+                    "cpm": "R$ {:.2f}".format(random.uniform(5, 30)),
+                    "duracao": "PT5M30S",
+                    "publicado": "2 dias atrás",
+                    "hashtags": ["#" + termo.lower(), "#tendência"]
+                }
+            ]
+        }
