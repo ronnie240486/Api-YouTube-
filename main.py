@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import amazon_busca
+from routers import youtube_busca
 
 app = FastAPI()
 
@@ -13,4 +13,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(amazon_busca.router, prefix="/amazon")
+app.include_router(youtube_busca.router, prefix="/youtube")
