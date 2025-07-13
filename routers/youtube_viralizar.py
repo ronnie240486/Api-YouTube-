@@ -41,53 +41,64 @@ def tempo_publicacao(published_at):
 
 @router.get("/viralizar")
 def buscar_videos(termo: str, pais: str = "", cidade: str = ""):
-    print(f"Buscando vídeos para: {termo}, País: {pais}, Cidade: {cidade}")
-    region_code = pais.upper() if pais else "BR"
-    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&regionCode={region_code}&type=video&maxResults=10&key={YOUTUBE_API_KEY}"
-    search_res = requests.get(url).json()
+    print(f"[LOG] Termo: {termo}, País: {pais}, Cidade: {cidade}")
+    if not YOUTUBE_API_KEY:
+        print("[ERRO] YOUTUBE_API_KEY não está definida!")
+        return {"erro": "API Key ausente no servidor"}
 
-    resultados = []
+    try:
+        region_code = pais.upper() if pais else "BR"
+        url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={termo}&regionCode={region_code}&type=video&maxResults=10&key={YOUTUBE_API_KEY}"
+        search_res = requests.get(url).json()
 
-    for item in search_res.get("items", []):
-        video_id = item["id"]["videoId"]
-        snippet = item["snippet"]
-        titulo = snippet["title"]
-        canal = snippet["channelTitle"]
-        publicado_em = snippet["publishedAt"]
-        thumbnail = snippet["thumbnails"]["high"]["url"]
-        canal_id = snippet["channelId"]
+        if "error" in search_res:
+            print(f"[ERRO] Erro ao buscar vídeos: {search_res['error']}")
+            return {"erro": search_res['error']}
 
-        stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
-        stats_res = requests.get(stats_url).json()
-        stats = stats_res.get("items", [{}])[0]
+        resultados = []
 
-        views = int(stats.get("statistics", {}).get("viewCount", 0))
-        likes = int(stats.get("statistics", {}).get("likeCount", 0))
-        comentarios = int(stats.get("statistics", {}).get("commentCount", 0))
-        engajamento = round((likes + comentarios) / views * 100, 2) if views else 0
+        for item in search_res.get("items", []):
+            video_id = item["id"]["videoId"]
+            snippet = item["snippet"]
+            titulo = snippet["title"]
+            canal = snippet["channelTitle"]
+            publicado_em = snippet["publishedAt"]
+            thumbnail = snippet["thumbnails"]["high"]["url"]
+            canal_id = snippet["channelId"]
 
-        cpm = 15.0  # Simulado
-        receita = round((views / 1000) * cpm, 2)
-        duracao = format_duration(stats.get("contentDetails", {}).get("duration", "PT0S"))
-        tempo = tempo_publicacao(publicado_em)
+            stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
+            stats_res = requests.get(stats_url).json()
 
-        resultados.append({
-            "titulo": titulo,
-            "canal": canal,
-            "canal_link": f"https://www.youtube.com/channel/{canal_id}",
-            "canal_icone": f"https://yt3.ggpht.com/ytc/{canal_id}=s68-c-k-c0x00ffffff-no-rj",
-            "thumbnail": thumbnail,
-            "link": f"https://www.youtube.com/watch?v={video_id}",
-            "views": views,
-            "views_por_hora": int(views / max(1, ((datetime.utcnow() - parser.isoparse(publicado_em)).total_seconds() / 3600))),
-            "cpm_estimado": f"R$ {cpm:.2f}",
-            "receita_estimada": f"R$ {receita:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            "engajamento": engajamento,
-            "duracao": duracao,
-            "tempo_publicacao": tempo,
-            "hashtags": "#video #trending #viral",
-            "pais": pais,
-            "cidade": cidade or "Não especificada"
-        })
+            stats = stats_res.get("items", [{}])[0]
+            views = int(stats.get("statistics", {}).get("viewCount", 0))
+            likes = int(stats.get("statistics", {}).get("likeCount", 0))
+            comentarios = int(stats.get("statistics", {}).get("commentCount", 0))
+            engajamento = round((likes + comentarios) / views * 100, 2) if views else 0
+            cpm = 15.0
+            receita = round((views / 1000) * cpm, 2)
+            duracao = format_duration(stats.get("contentDetails", {}).get("duration", "PT0S"))
+            tempo = tempo_publicacao(publicado_em)
 
-    return resultados
+            resultados.append({
+                "titulo": titulo,
+                "canal": canal,
+                "canal_link": f"https://www.youtube.com/channel/{canal_id}",
+                "canal_icone": f"https://yt3.ggpht.com/ytc/{canal_id}=s68-c-k-c0x00ffffff-no-rj",
+                "thumbnail": thumbnail,
+                "link": f"https://www.youtube.com/watch?v={video_id}",
+                "views": views,
+                "views_por_hora": int(views / max(1, ((datetime.utcnow() - parser.isoparse(publicado_em)).total_seconds() / 3600))),
+                "cpm_estimado": f"R$ {cpm:.2f}",
+                "receita_estimada": f"R$ {receita:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                "engajamento": engajamento,
+                "duracao": duracao,
+                "tempo_publicacao": tempo,
+                "hashtags": "#video #trending #viral",
+                "pais": pais,
+                "cidade": cidade or "Não especificada"
+            })
+
+        return resultados
+    except Exception as e:
+        print(f"[ERRO GERAL] {str(e)}")
+        return {"erro": str(e)}
