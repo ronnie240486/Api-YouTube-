@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import youtube_detalhado, amazon_detalhado
+from routers import youtube_real, amazon_real
 
 app = FastAPI()
 
-# Middleware de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,5 +12,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(youtube_detalhado.router, prefix="/youtube")
-app.include_router(amazon_detalhado.router, prefix="/amazon")
+app.include_router(youtube_real.router, prefix="/youtube")
+app.include_router(amazon_real.router, prefix="/amazon")
