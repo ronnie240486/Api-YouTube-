@@ -1,28 +1,22 @@
-
 import os
-from typing import List
-import datetime
-from amazon.paapi import AmazonAPI
 
-def buscar_produtos_reais(termo: str) -> List[dict]:
-    access_key = os.getenv("AWS_ACCESS_KEY")
-    secret_key = os.getenv("AWS_SECRET_KEY")
-    associate_tag = os.getenv("AMAZON_TAG")
-    region = os.getenv("REGION", "us-east-1")
+def buscar_produtos_amazon(termo):
+    access = os.getenv("AMAZON_ACCESS_KEY")
+    secret = os.getenv("AMAZON_SECRET_KEY")
+    tag = os.getenv("AMAZON_TAG")
+    region = os.getenv("AMAZON_REGION")
 
-    if not all([access_key, secret_key, associate_tag]):
-        raise ValueError("Credenciais da Amazon não estão definidas no .env")
+    if not access or not secret or not tag:
+        return {"erro": "Credenciais da Amazon não estão definidas no .env"}
 
-    amazon = AmazonAPI(access_key, secret_key, associate_tag, region)
-    products = amazon.search_items(keywords=termo, search_index="All", item_count=10)
-
-    resultados = []
-    for item in products.items:
-        resultados.append({
-            "titulo": item.item_info.title.display_value,
-            "preco": getattr(item.offers.listings[0].price, "display_amount", "R$ ?"),
-            "imagem": item.images.primary.large.url,
-            "avaliacao": item.item_info.by_line_info.brand.display_value if item.item_info.by_line_info else "N/A",
-            "link": item.detail_page_url
-        })
-    return resultados
+    # Simulação de retorno real
+    return {
+        "produtos": [
+            {
+                "titulo": f"Produto exemplo para '{termo}'",
+                "preco": "R$ 99,90",
+                "imagem": "https://via.placeholder.com/150",
+                "link": "https://www.amazon.com.br/"
+            }
+        ]
+    }
