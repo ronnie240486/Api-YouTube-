@@ -1,13 +1,12 @@
 from fastapi import APIRouter
 import os
 from dotenv import load_dotenv
-import logging
 
 load_dotenv()
 
 router = APIRouter()
 
-@router.get("/amazon/teste-variaveis")
+@router.get("/teste-variaveis")
 def testar_variaveis():
     access_key = os.getenv("AMAZON_ACCESS_KEY")
     secret_key = os.getenv("AMAZON_SECRET_KEY")
