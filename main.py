@@ -1,11 +1,12 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import amazon_scraper
+from routers import amazon_scraper, youtube
 
 app = FastAPI()
 
-app.include_router(amazon_scraper.router)
+app.include_router(amazon_scraper.router, prefix="/amazon")
+app.include_router(youtube.router, prefix="/youtube")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,5 +17,5 @@ app.add_middleware(
 )
 
 @app.get("/")
-def read_root():
-    return {"mensagem": "API YouTube + Amazon online"}
+def root():
+    return {"mensagem": "API YouTube + Amazon Online com HMAC"}
